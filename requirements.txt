@@ -1,0 +1,8 @@
+# torch ortama göre (CPU/CUDA) ayrıca kurulur
+gradio
+numpy
+soundfile
+librosa
+pyloudnorm
+yt-dlp
+demucs
