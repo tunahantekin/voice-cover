@@ -4,20 +4,28 @@ Ekrandaki 2-3 cümleyi okuyup sesini kaydediyorsun, bir şarkı ekliyorsun. Çı
 
 ## Nasıl çalışır
 
-1. Referans ses doğrulanır.
-2. Demucs şarkıyı vokal ve enstrümantal olarak ayırır.
-3. Seed-VC vokali senin sesine dönüştürür.
-4. Vokal ve enstrümantal yeniden miks edilir.
+1. Ses kaydın kontrol edilir (süre, sessizlik, cızırtı) ve hazırlanır.
+2. Demucs şarkıyı vokal ve müzik olarak ayırır.
+3. Vokalin en yoğun bölümü seçilir (varsayılan 30 sn).
+4. Seed-VC vokali senin sesine dönüştürür. Oktav, sesinin perdesine göre otomatik seçilir.
+5. Vokal müzikle yeniden birleştirilir. Ton değiştirilirse müzik de aynı kadar kaydırılır.
 
-> Durum: iskelet aşaması, iş mantığı henüz yazılmadı.
+> Durum: çalışan ilk sürüm. GTX 1650'de 30 sn yaklaşık 8 dakika sürüyor.
 
 ## Kurulum
 
 ```bash
-pip install torch            # ortamına uygun sürüm
-pip install -r requirements.txt
-python scripts/setup_seedvc.py
-python app.py
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128   # ortamına uygun sürüm
+pip install -r requirements-dev.txt
+python scripts/setup_seedvc.py      # Seed-VC'yi ayrı bir venv'e kurar (Python 3.10 gerekir)
+```
+
+## Kullanım
+
+```bash
+python app.py                                                  # arayüz: http://127.0.0.1:7860
+python cli.py --ref ses.wav --song sarki.mp3 --out cover.wav   # komut satırı
+pytest -m "not slow"                                           # hızlı testler
 ```
 
 ## Kullanılan bileşenler ve lisanslar
