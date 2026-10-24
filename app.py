@@ -81,7 +81,7 @@ def build_app() -> gr.Blocks:
 
         with gr.Row():
             with gr.Column():
-                gr.Markdown("### 1. Bu cümleleri sesli oku\n" + "\n".join(f"> {s}" for s in SENTENCES))
+                gr.Markdown("### 1. Bu cümleleri sesli oku\n" + "\n".join(f"{i}. {s}" for i, s in enumerate(SENTENCES, 1)))
                 ref = gr.Audio(
                     sources=["microphone", "upload"], type="filepath",
                     label="Ses kaydın (sessiz ortamda, 10-20 sn)",

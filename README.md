@@ -1,42 +1,72 @@
 # voice-cover
 
-Ekrandaki 2-3 cümleyi okuyup sesini kaydediyorsun, bir şarkı ekliyorsun. Çıktı, o şarkının senin sesinle söylenmiş hali. Eğitim yok, zero-shot voice conversion kullanılıyor.
+Birkaç cümlelik ses kaydından, bir şarkıyı **senin sesinle** yeniden söyleten uçtan uca bir ses dönüştürme hattı. Model eğitimi yok, zero-shot çalışıyor.
+
+![Arayüz](docs/screenshot.png)
 
 ## Nasıl çalışır
 
-1. Ses kaydın kontrol edilir (süre, sessizlik, cızırtı) ve hazırlanır.
-2. Demucs şarkıyı vokal ve müzik olarak ayırır.
-3. Vokalin en yoğun bölümü seçilir (varsayılan 30 sn).
-4. Seed-VC vokali senin sesine dönüştürür. Oktav, sesinin perdesine göre otomatik seçilir.
-5. Vokal müzikle yeniden birleştirilir. Ton değiştirilirse müzik de aynı kadar kaydırılır.
+```mermaid
+flowchart LR
+    A[Ses kaydın<br/>10-20 sn] --> B[Doğrulama<br/>süre · sessizlik · clipping]
+    S[Şarkı<br/>dosya ya da link] --> D[Demucs<br/>vokal / müzik]
+    D --> W[En yoğun vokal<br/>bölümü seçilir]
+    B --> P[F0 analizi<br/>otomatik oktav]
+    W --> P
+    P --> V[Seed-VC<br/>F0 koşullu, zero-shot]
+    V --> M[Miks<br/>ton kaydırma · -14 LUFS]
+    W --> M
+    M --> O[cover.wav]
+```
 
-> Durum: çalışan ilk sürüm. GTX 1650'de 30 sn yaklaşık 8 dakika sürüyor.
+## Öne çıkan teknik kararlar
 
-## Kurulum
+- **Lisans ve bağımlılık izolasyonu:** Seed-VC (GPL-3.0) kopyalanmadı. Sabit bir commit'te `third_party/` altına klonlanıyor ve kendi Python 3.10 venv'inde subprocess ile çalışıyor. Ana ortam (torch 2.11, Gradio 6) ile Seed-VC'nin istediği eski sürümler (torch 2.4, transformers 4.46, numpy 1.26) çakışmıyor.
+- **Minimal bağımlılık:** Seed-VC'nin `requirements.txt` dosyası yerine `inference.py`'nin import zinciri izlendi. Derleme isteyen paketler (webrtcvad, funasr) olmadan, yalnızca gerçekten yüklenen 26 doğrudan bağımlılık sabit sürümle kuruluyor.
+- **Perde mantığı:** Ton kaydırma vokal ve müziğe birlikte uygulanıyor. Oktav kaydırma yalnızca vokale uygulanıyor, çünkü notalar değişmiyor. Oktav, konuşma sesinin ve şarkının medyan F0 değerine göre otomatik seçiliyor.
+- **Gizlilik:** Arayüz rıza onayı olmadan çalışmıyor. Yüklenen sesler ve ara dosyalar iş bitince (hata olsa da) siliniyor, sonuçlar en geç bir saatte temizleniyor.
+- **Güvenli link desteği:** Link yolu yalnızca YouTube ve SoundCloud'a izin veriyor. Şarkı süresi indirmeden önce kontrol ediliyor.
+
+## Ölçümler (GTX 1650, 4 GB)
+
+| Senaryo | Seed-VC süresi | RTF | Tepe VRAM |
+|---|---|---|---|
+| 30 sn vokal, 30 adım | 515 sn | 16.4 | 3120 MB |
+| 20 sn vokal, 15 adım (uçtan uca, toplam 224 sn) | 192 sn | 8.5 | 3120 MB |
+
+Demucs ile ayırma 3,4 dakikalık bir şarkıda yaklaşık 22 sn sürüyor. Sürenin büyük kısmı difüzyon adımlarında geçiyor (adım başına yaklaşık 5 sn).
+
+## Kurulum ve kullanım
 
 ```bash
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128   # ortamına uygun sürüm
 pip install -r requirements-dev.txt
-python scripts/setup_seedvc.py      # Seed-VC'yi ayrı bir venv'e kurar (Python 3.10 gerekir)
-```
+python scripts/setup_seedvc.py      # Seed-VC'yi ayrı venv'e kurar (Python 3.10 gerekir)
 
-## Kullanım
-
-```bash
 python app.py                                                  # arayüz: http://127.0.0.1:7860
 python cli.py --ref ses.wav --song sarki.mp3 --out cover.wav   # komut satırı
-pytest -m "not slow"                                           # hızlı testler
+pytest -m "not slow"                                           # 85 hızlı test
+```
+
+## Proje yapısı
+
+```
+src/voice_cover/   audio_utils · fetch · separate · convert · mix · pipeline
+app.py             Gradio arayüzü (mobil uyumlu)
+cli.py             komut satırı
+scripts/           Seed-VC kurulumu, deneme betiği
+tests/             pytest (Seed-VC ve Demucs mock'lanır, slow testler gerçek çalışır)
 ```
 
 ## Kullanılan bileşenler ve lisanslar
 
 | Bileşen | Görev | Lisans |
 |---|---|---|
-| Seed-VC | Ses dönüştürme | GPL-3.0 (kod ve model ağırlıkları). Kod kopyalanmaz, `third_party/` altına klonlanıp subprocess ile çağrılır. |
+| Seed-VC | Ses dönüştürme | GPL-3.0 (kod ve model ağırlıkları) |
 | BigVGAN (nvidia/bigvgan_v2_44khz_128band_512x) | Vocoder | MIT |
 | whisper-small (openai) | İçerik çıkarımı | Apache-2.0 |
 | CAM++ (funasr/campplus) | Konuşmacı gömmesi | Apache-2.0 |
-| RMVPE (lj1995/VoiceConversionWebUI) | Perde (F0) çıkarımı | MIT + "yalnızca araştırma amaçlı" ek madde. Ticari kullanıma uygun değil. Yazılımı kullanan ve üretilen sesleri yayan kişi sorumludur. |
+| RMVPE (lj1995/VoiceConversionWebUI) | Perde (F0) çıkarımı | MIT + "yalnızca araştırma amaçlı" ek madde |
 | Demucs | Vokal ayırma | MIT |
 | Gradio | Arayüz | Apache-2.0 |
 | yt-dlp | Linkten şarkı indirme | Unlicense |
@@ -44,14 +74,8 @@ pytest -m "not slow"                                           # hızlı testler
 | pyloudnorm | Ses yüksekliği | MIT |
 | soundfile, NumPy, PyTorch, torchaudio | Ses okuma/yazma, hesaplama | BSD-3-Clause |
 
-## Lisans
+Bu projenin kendi kodu [GPL-3.0](LICENSE) lisanslıdır.
 
-Bu projenin kendi kodu [GPL-3.0](LICENSE) lisanslıdır. Yukarıdaki bileşenler kendi lisanslarına tabidir.
+## Ticari olmayan kullanım ve etik
 
-## Ticari olmayan kullanım
-
-Bu proje yalnızca ticari olmayan, kişisel ve araştırma amaçlı kullanım içindir. RMVPE'nin "yalnızca araştırma amaçlı" ek maddesi nedeniyle projeyi ya da ürettiği sesleri ticari bir üründe veya hizmette kullanma. Seed-VC'nin GPL-3.0 lisansı ayrıca, dağıtılan türev çalışmaların kaynak kodunun aynı lisansla paylaşılmasını şart koşar.
-
-## Etik ve gizlilik
-
-Yalnızca kendi sesini ya da izin aldığın birinin sesini kullan. Yüklenen sesler işlem bitince silinir ve arayüz kullanmadan önce rıza onayı ister. Şarkıların telif hakları sahiplerine aittir.
+Proje yalnızca kişisel ve araştırma amaçlı kullanım içindir. RMVPE'nin ek maddesi nedeniyle ticari kullanıma uygun değildir. Yalnızca kendi sesini ya da izin aldığın birinin sesini kullan. Şarkıların hakları sahiplerine aittir.
