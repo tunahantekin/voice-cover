@@ -37,11 +37,16 @@ pytest -m "not slow"                                           # hızlı testler
 | whisper-small (openai) | İçerik çıkarımı | Apache-2.0 |
 | CAM++ (funasr/campplus) | Konuşmacı gömmesi | Apache-2.0 |
 | RMVPE (lj1995/VoiceConversionWebUI) | Perde (F0) çıkarımı | MIT + "yalnızca araştırma amaçlı" ek madde. Ticari kullanıma uygun değil. Yazılımı kullanan ve üretilen sesleri yayan kişi sorumludur. |
-| Demucs | Vokal ayırma | Doğrulanacak |
-| Gradio | Arayüz | Doğrulanacak |
-| yt-dlp | Linkten şarkı indirme | Doğrulanacak |
-| librosa | Ses işleme | Doğrulanacak |
-| pyloudnorm | Ses yüksekliği | Doğrulanacak |
+| Demucs | Vokal ayırma | MIT |
+| Gradio | Arayüz | Apache-2.0 |
+| yt-dlp | Linkten şarkı indirme | Unlicense |
+| librosa | Ses işleme | ISC |
+| pyloudnorm | Ses yüksekliği | MIT |
+| soundfile, NumPy, PyTorch, torchaudio | Ses okuma/yazma, hesaplama | BSD-3-Clause |
+
+## Lisans
+
+Bu projenin kendi kodu [GPL-3.0](LICENSE) lisanslıdır. Yukarıdaki bileşenler kendi lisanslarına tabidir.
 
 ## Ticari olmayan kullanım
 
