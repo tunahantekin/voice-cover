@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>voice-cover</title>
+<meta name="description" content="Birkaç cümlelik ses kaydından şarkıyı kendi sesinle söyleten zero-shot ses dönüştürme hattı: Demucs + Seed-VC + Gradio.">
+<style>
+  :root {
+    --bg: #fbfaf8; --surface: #ffffff; --text: #1f1d1a; --muted: #6b665e;
+    --border: #e7e3dc; --accent: #f97316; --accent-soft: #fff1e6; --code: #f4f1ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161412; --surface: #1f1c19; --text: #ece8e2; --muted: #a39d94;
+      --border: #34302b; --accent: #fb923c; --accent-soft: #2b2118; --code: #26221e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 2.4rem; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.3rem; margin: 48px 0 16px; }
+  p.lead { font-size: 1.15rem; color: var(--muted); margin: 0 0 24px; max-width: 680px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 999px;
+           background: var(--accent-soft); color: var(--accent); border: 1px solid var(--border); }
+  .btn { display: inline-block; padding: 10px 18px; border-radius: 10px; background: var(--accent);
+         color: #fff; text-decoration: none; font-weight: 600; }
+  .btn:hover { filter: brightness(1.05); }
+  figure { margin: 32px 0 0; }
+  figure img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); display: block; }
+  figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+  ol.flow { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px;
+            grid-template-columns: repeat(3, 1fr); counter-reset: s; }
+  ol.flow li { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+               padding: 14px; counter-increment: s; }
+  ol.flow li::before { content: counter(s); display: inline-grid; place-items: center; width: 24px; height: 24px;
+                       border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.8rem;
+                       font-weight: 700; margin-bottom: 8px; }
+  ol.flow b { display: block; }
+  ol.flow span { font-size: 0.88rem; color: var(--muted); }
+  .cards { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 640px) {
+    ol.flow, .cards { grid-template-columns: 1fr; }
+  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 1rem; }
+  .card p { margin: 0; font-size: 0.92rem; color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; background: var(--surface);
+          border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { background: var(--code); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; }
+  code { background: var(--code); padding: 2px 6px; border-radius: 6px; font-size: 0.88em; }
+  .note { font-size: 0.88rem; color: var(--muted); margin-top: 10px; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+           font-size: 0.85rem; color: var(--muted); }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>voice-cover</h1>
+  <p class="lead">Birkaç cümlelik ses kaydından, bir şarkıyı <strong>senin sesinle</strong> yeniden söyleten uçtan uca ses dönüştürme hattı. Model eğitimi yok, zero-shot çalışıyor.</p>
+  <div class="badges">
+    <span class="badge">Python</span><span class="badge">PyTorch</span><span class="badge">Seed-VC</span>
+    <span class="badge">Demucs</span><span class="badge">Gradio</span><span class="badge">pytest · 85 test</span>
+  </div>
+  <a class="btn" href="https://github.com/tunahantekin/voice-cover">Kaynak kodu GitHub'da gör</a>
+
+  <figure>
+    <img src="screenshot.png" alt="voice-cover Gradio arayüzü: okunacak cümleler, ses kaydı, şarkı yükleme, gelişmiş ayarlar ve rıza onayı" loading="lazy">
+    <figcaption>Gradio arayüzü. Telefonda sütunlar alt alta diziliyor.</figcaption>
+  </figure>
+
+  <h2>Nasıl çalışır</h2>
+  <ol class="flow">
+    <li><b>Ses kaydı</b><span>Süre, sessizlik ve clipping kontrolü, 44.1 kHz mono hazırlık</span></li>
+    <li><b>Demucs</b><span>Şarkı vokal ve müzik olarak ayrılır</span></li>
+    <li><b>Bölüm seçimi</b><span>Vokalin en yoğun kısmı otomatik bulunur</span></li>
+    <li><b>F0 analizi</b><span>Sesinle şarkının perdesi karşılaştırılır, oktav seçilir</span></li>
+    <li><b>Seed-VC</b><span>F0 koşullu zero-shot dönüştürme</span></li>
+    <li><b>Miks</b><span>Ton kaydırma, -14 LUFS, cover.wav</span></li>
+  </ol>
+
+  <h2>Öne çıkan teknik kararlar</h2>
+  <div class="cards">
+    <div class="card"><h3>Bağımlılık izolasyonu</h3><p>Seed-VC (GPL-3.0) kopyalanmadı. Sabit commit'te klonlanıp kendi Python 3.10 ortamında subprocess ile çalışıyor. Ana ortamla sürüm çakışması yok.</p></div>
+    <div class="card"><h3>Minimal kurulum</h3><p>Resmi requirements yerine import zinciri izlendi. Derleme isteyen paketler olmadan 26 doğrudan bağımlılık sabit sürümle kuruluyor.</p></div>
+    <div class="card"><h3>Perde mantığı</h3><p>Ton kaydırma vokal ve müziğe birlikte, oktav kaydırma yalnızca vokale uygulanıyor. Notalar değişmediği için müzikle uyum bozulmuyor.</p></div>
+    <div class="card"><h3>Gizlilik</h3><p>Rıza onayı olmadan çalışmıyor. Yüklenen sesler ve ara dosyalar iş bitince siliniyor, sonuçlar en geç bir saatte temizleniyor.</p></div>
+  </div>
+
+  <h2>Ölçümler (GTX 1650, 4 GB)</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Senaryo</th><th>Seed-VC süresi</th><th>RTF</th><th>Tepe VRAM</th></tr></thead>
+      <tbody>
+        <tr><td>30 sn vokal, 30 adım</td><td class="num">515 sn</td><td class="num">16.4</td><td class="num">3120 MB</td></tr>
+        <tr><td>20 sn vokal, 15 adım (uçtan uca 224 sn)</td><td class="num">192 sn</td><td class="num">8.5</td><td class="num">3120 MB</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Sürenin büyük kısmı difüzyon adımlarında geçiyor (adım başına yaklaşık 5 sn). Demucs 3,4 dakikalık şarkıyı yaklaşık 22 sn'de ayırıyor.</p>
+
+  <h2>Bu sayfa hakkında</h2>
+  <p>Bu bir vitrin sayfası, burada model çalışmıyor. Projeyi kendi bilgisayarında çalıştırmak için GitHub'daki kurulum adımlarına bak: <code>python scripts/setup_seedvc.py</code> ve <code>python app.py</code>.</p>
+
+  <footer>
+    Kod GPL-3.0 lisanslıdır. Bileşenler: Seed-VC (GPL-3.0), BigVGAN (MIT), whisper-small (Apache-2.0), CAM++ (Apache-2.0),
+    RMVPE (MIT + yalnızca araştırma amaçlı ek madde), Demucs (MIT), Gradio (Apache-2.0).
+    Ticari olmayan kullanım içindir. Yalnızca kendi sesini ya da izin aldığın birinin sesini kullan.<br>
+    <a href="https://github.com/tunahantekin">github.com/tunahantekin</a>
+  </footer>
+</main>
+</body>
+</html>
