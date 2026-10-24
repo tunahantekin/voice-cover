@@ -1,0 +1,4 @@
+# Seed-VC venv'inde pip'in bu sürümleri DEĞİŞTİRMESİNİ engeller (setup_seedvc.py her pip adımında -c ile verir).
+numpy==1.26.4
+torch==2.4.0+cu121
+torchaudio==2.4.0+cu121

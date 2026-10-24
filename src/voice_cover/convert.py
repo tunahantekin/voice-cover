@@ -1,10 +1,10 @@
-"""third_party/seed-vc altındaki Seed-VC'nin F0 koşullu şarkı modelini subprocess ile çağırıp vokali referans sese dönüştürür."""
+"""third_party/seed-vc altındaki Seed-VC'nin F0 koşullu şarkı modelini, kendi venv'i ile subprocess üzerinden çağırıp vokali referans sese dönüştürür."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-SEEDVC_DIR = Path(__file__).resolve().parents[2] / "third_party" / "seed-vc"
+from voice_cover.seedvc_env import SEEDVC_DIR, SEEDVC_PYTHON
 
 
 def convert_vocals(
@@ -14,5 +14,6 @@ def convert_vocals(
     semitones: int = 0,
     diffusion_steps: int = 30,
     seedvc_dir: Path = SEEDVC_DIR,
+    seedvc_python: Path = SEEDVC_PYTHON,
 ) -> Path:
     raise NotImplementedError
